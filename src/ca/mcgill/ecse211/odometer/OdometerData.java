@@ -204,4 +204,14 @@ public class OdometerData {
 	  }
 
 
+	  public void setPosition(double[] position, boolean[] update) {
+		  synchronized (this) {
+			  if (update[0])
+				x = position[0];
+			  if (update[1])
+				y = position[1];
+			  if (update[2])
+				theta = position[2];
+			}
+		}
 }

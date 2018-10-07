@@ -19,8 +19,8 @@ public class Odometer extends OdometerData implements Runnable {
 	  public EV3LargeRegulatedMotor leftMotor;
 	  public EV3LargeRegulatedMotor rightMotor;
 
-	  private final double TRACK;
-	  private final double WHEEL_RAD;
+	  public final double TRACK;
+	  public final double WHEEL_RAD;
 
 	  private double[] position;
 

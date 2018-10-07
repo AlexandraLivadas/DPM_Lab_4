@@ -48,7 +48,6 @@ public class Display extends Thread implements Runnable {
 	}
 
 	public void run() {
-		usPoller = UltrasonicPoller.getInstance();
 	    lcd.clear();
 	    
 	    long updateStart, updateEnd;
@@ -68,7 +67,7 @@ public class Display extends Thread implements Runnable {
 	      lcd.drawString("X: " + numberFormat.format(position[0]), 0, 0);
 	      lcd.drawString("Y: " + numberFormat.format(position[1]), 0, 1);
 	      lcd.drawString("T: " + numberFormat.format(position[2]), 0, 2);
-	      
+
 	      
 	      if (usPoller != null) {
 	          lcd.drawString("Distance: " + numberFormat.format(usPoller.distance), 0, 3);
