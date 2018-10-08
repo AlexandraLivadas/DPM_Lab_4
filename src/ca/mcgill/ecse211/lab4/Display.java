@@ -4,6 +4,7 @@ import java.text.DecimalFormat;
 
 import ca.mcgill.ecse211.odometer.Odometer;
 import ca.mcgill.ecse211.odometer.OdometerExceptions;
+import ca.mcgill.ecse211.Ultrasonic.USLocalizer;
 import ca.mcgill.ecse211.Ultrasonic.UltrasonicPoller;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
@@ -60,15 +61,18 @@ public class Display extends Thread implements Runnable {
 	      
 	      // Print x,y, and theta information
 	      DecimalFormat numberFormat = new DecimalFormat("######0.00");
-	      lcd.drawString("X: " + numberFormat.format(position[0]), 0, 0);
-	      lcd.drawString("Y: " + numberFormat.format(position[1]), 0, 1);
-	      lcd.drawString("T: " + numberFormat.format(position[2]), 0, 2);
-
+	      lcd.drawString("X: " + numberFormat.format(odo.getXYT()[0]), 0, 0);
+	      lcd.drawString("Y: " + numberFormat.format(odo.getXYT()[1]), 0, 1);
+	      lcd.drawString("T: " + numberFormat.format(odo.getXYT()[2]), 0, 2);
 	      
 	      if (usPoller != null) {
 	          lcd.drawString("Distance: " + numberFormat.format(usPoller.distance), 0, 3);
 	          //lcd.drawString("DMR: " + numberFormat.format(usPoller.getController().dotMagnitudeRatio), 0, 4);
 	      }
+	      
+	      lcd.drawString("Theta A: " + numberFormat.format(USLocalizer.thetaA), 0, 5);
+	      lcd.drawString("Theta B: " + numberFormat.format(USLocalizer.thetaB), 0, 6);
+	      lcd.drawString("Theta Av: " + numberFormat.format(USLocalizer.thetaAv), 0, 7);
 	      
 //	      // DEBUG
 //	      int[] tachos = odo.getTachoCount();

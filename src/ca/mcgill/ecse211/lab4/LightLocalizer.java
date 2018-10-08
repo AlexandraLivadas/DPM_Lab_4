@@ -20,13 +20,14 @@ public class LightLocalizer extends Thread{
 	private float firstReading;
 	private double lightThreshold = 30.0;
 	public float lightSensorIntensity;
-	private double sensorDistance = 0;
+	private double sensorDistance = 6.5; //in cm, 4.5inches
 	private final double WHEEL_RAD = 2.2;
 	private double[] lineAngles, linePos;
+	private int TURN_ERROR = 5;
 
 	
 	private static final int FORWARD_SPEED = 250;
-	private static final int ROTATE_SPEED = 150;
+	private static final int ROTATE_SPEED = 100;
 	
 	
 	public LightLocalizer(Odometer odo, SampleProvider ls, float[] lsData) {
@@ -55,12 +56,12 @@ public class LightLocalizer extends Thread{
 		//At this point, the robot will (ideally) be at 0-degrees
 		//Turning it 45 degrees will (ideally) turn it in the direction of (0,0)
 		//***Might want to change this to just 45???
-		nav.turnTo(odo.getXYT()[2], odo.getXYT()[2]+45);
+		nav.turnTo(odo.getXYT()[2], 45);
 		
 		isNavigating = true;
 		
-		odo.leftMotor.setSpeed(FORWARD_SPEED);
-		odo.rightMotor.setSpeed(FORWARD_SPEED);
+		odo.leftMotor.setSpeed(ROTATE_SPEED);
+		odo.rightMotor.setSpeed(ROTATE_SPEED);
 		odo.leftMotor.forward();
 		odo.rightMotor.forward();
 
@@ -84,8 +85,32 @@ public class LightLocalizer extends Thread{
 	      } 
 		}
 		
-		odo.leftMotor.rotate(nav.convertDistance(WHEEL_RAD , sensorDistance), true);
-		odo.rightMotor.rotate(nav.convertDistance(WHEEL_RAD, sensorDistance), false);
+		odo.leftMotor.rotate(-nav.convertDistance(WHEEL_RAD , sensorDistance), true);
+		odo.rightMotor.rotate(-nav.convertDistance(WHEEL_RAD, sensorDistance), false);
+		odo.leftMotor.rotate(nav.convertAngle(odo.WHEEL_RAD, odo.TRACK, -90), true);
+		odo.rightMotor.rotate(-nav.convertAngle(odo.WHEEL_RAD, odo.TRACK, -90), false);
+		
+		while(isNavigating) {
+		      correctionStart = System.currentTimeMillis();
+		      ls.fetchSample(lsData, 0); // acquire data from sensor
+		      intensity = (float) (lsData[0] * 100.0); // extract from buffer, cast to float
+		      this.lightSensorIntensity = intensity;
+		      /*If the current reading is significantly less than the first reading 
+		       * (aka 30% less), a line is being passed. 
+		       * Has to be a significant enough change, since the panels are not a uniform color. */
+		      if ((100*Math.abs(intensity - firstReading)/firstReading) > lightThreshold) { 
+		    	  		if (intensity < firstReading) {
+		    	  			odo.leftMotor.stop();
+		    	  			odo.rightMotor.stop();
+		    	  			isNavigating = false;
+		    	  		}
+		      } 
+			}
+		
+		odo.leftMotor.rotate(-nav.convertDistance(WHEEL_RAD , sensorDistance - 3), true);
+		odo.rightMotor.rotate(-nav.convertDistance(WHEEL_RAD, sensorDistance - 3), false);
+		odo.leftMotor.backward();
+		odo.rightMotor.forward();
 		
 		lineCount = 0;
 		lineAngles = new double[4];
@@ -112,10 +137,10 @@ public class LightLocalizer extends Thread{
 		    		}
 		    }
 		   
-		    odo.leftMotor.setSpeed(ROTATE_SPEED);
-		    odo.rightMotor.setSpeed(ROTATE_SPEED);
-		    odo.leftMotor.backward();
-		    odo.rightMotor.forward();
+//		    odo.leftMotor.setSpeed(50);
+//		    odo.rightMotor.setSpeed(50);
+//		    odo.leftMotor.backward();
+//		    odo.rightMotor.forward();
 		    
 		}
 		
@@ -129,8 +154,13 @@ public class LightLocalizer extends Thread{
 		correctedX = sensorDistance*Math.cos(Math.toRadians(thetaY/2));
 		correctedY = sensorDistance*Math.cos(Math.toRadians(thetaX/2));
 		
+		//nav.turnTo(odo.getXYT()[2], 0);
+		//odo.setPosition(new double [] {correctedX, correctedY, 0.0}, new boolean [] {true, true, true});
+		
+		
+
 		//Not sure about deltaThetaX calc. ***Could be lineAngles[2]
-		deltaThetaX = 270 - (thetaX/2) - lineAngles[0];
+		deltaThetaX = 270 - (thetaX/2) - lineAngles[2];
 		deltaThetaY = 270 - (thetaY/2) - lineAngles[3];
 		
 		deltaTheta = (deltaThetaX + deltaThetaY)/2;
@@ -139,17 +169,29 @@ public class LightLocalizer extends Thread{
 		correctedTheta = nav.normalizeAngle(correctedTheta);
 		
 		odo.setXYT(correctedX, correctedY, correctedTheta);	
-		
+
 		nav.travelTo(0, 0);
+		nav.turnTo(odo.getXYT()[2], 50);
+		//nav.turnTo(odo.getXYT()[2], 360-TURN_ERROR);
+		odo.setTheta(0);
+		odo.leftMotor.stop();
+		odo.rightMotor.stop();
+
 		
 		try {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
 			
 		}
-		
-		nav.turnTo(odo.getXYT()[2], 0);
+
 	}
 
+	// method moves the robot forwards and updates the isNavigating value
+	private void forward()
+	{
+		odo.leftMotor.forward();
+		odo.rightMotor.forward();
+		isNavigating = true;
+	}
 }
 

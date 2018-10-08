@@ -36,15 +36,20 @@ public class USLocalizer extends Thread{
 	private EV3LargeRegulatedMotor leftMotor;
 	private EV3LargeRegulatedMotor rightMotor;
 	private int prevDistance;
-	private double thetaA, thetaB, thetaAv, thetaZero;
+	public static double thetaA;
+	public static double thetaB;
+	public static double thetaAv;
+
+
+	private double thetaZero;
 	private int filterControl;
 	
 	
 	public int FILTER_OUT = 20;
 	public static int FILTER_OUT_DIST = 50;
-	public static int WALL_DIST = 40;
+	public static int WALL_DIST = 35;
 	public static int WALL_ERROR = 8;
-	public static int TURN_ERROR = 0;
+	public static int TURN_ERROR = 2;
 
 	private static final int FORWARD_SPEED = 250;
 	private static final int ROTATE_SPEED = 120;
@@ -95,18 +100,23 @@ public class USLocalizer extends Thread{
 
 			switch(state) {
 				case RESET:
+					//If it is far from the wall, stop the motors, set theta=0 and start seeking thetaA (SEEK state)
 					if (distance >= FILTER_OUT_DIST) {
 						leftMotor.stop(true);
 						rightMotor.stop(false);
 						odo.setTheta(0);
 						Sound.twoBeeps();
 						this.state = LocalizationState.SEEK;
-					} else {
+					} 
+					//If it is not too far from the wall, start moving counterclockwise until it is
+					else {
 						leftMotor.backward();
 						rightMotor.forward();
 					}
 					break;
 				case SEEK:
+					//Here, it is seeing the first falling edge:
+					//Stop the motors, get thetaA, rotate clockwise (by thetaA amount), start looking for thetaB (SEEK_2 case)
 					if ((distance <= WALL_DIST + WALL_ERROR) && (prevDistance > WALL_DIST + WALL_ERROR))  {
 						leftMotor.stop(true);
 						rightMotor.stop(false);
@@ -115,32 +125,51 @@ public class USLocalizer extends Thread{
 						leftMotor.rotate(convertAngle(odo.WHEEL_RAD, odo.TRACK,-thetaA), true);
 						rightMotor.rotate(-convertAngle(odo.WHEEL_RAD, odo.TRACK, -thetaA), false);
 						this.state = LocalizationState.SEEK_2;
-					} else {
+					} 
+					//If no falling edge detected, just keep moving clockwise
+					else {
 						leftMotor.forward();
 						rightMotor.backward();
 					}
 					break;
 				case SEEK_2:
+					//Detects second falling edge: stop motors, get thetaB, start correcting (CORRECTION case)
 					if ((distance <= WALL_DIST + WALL_ERROR) && (prevDistance > WALL_DIST + WALL_ERROR)) {
 						leftMotor.stop(true);
 						rightMotor.stop(false);
 						thetaB = odo.getXYT()[2] - 360;
 						Sound.beep();
 						this.state = LocalizationState.CORRECTION;
-					} else {
+					} 
+					//If no falling edge, keep moving counterclockwise
+					else {
 						leftMotor.backward();
 						rightMotor.forward();
 					}
 					break;
 				case CORRECTION:
+////					//If thetaA is greater than 360
+//					if(thetaA > thetaB) {
+//						thetaA -= 360;
+//					}
+					
 					//thetaAv will be 45 degrees away from zero degrees
 					this.thetaAv = (this.thetaA - this.thetaB)/2.0;
 					this.thetaZero = thetaAv - 45.0;
+					
 
+					//Rotate in the direction of thetaZero
 					leftMotor.rotate(convertAngle(odo.WHEEL_RAD, odo.TRACK, thetaZero + TURN_ERROR), true);
 					rightMotor.rotate(-convertAngle(odo.WHEEL_RAD, odo.TRACK, thetaZero + TURN_ERROR), false);
 
+					leftMotor.stop();
+					rightMotor.stop();
 					odo.setTheta(0);
+					odo.setTheta(0);
+					
+					//odo.setTheta(0);
+					//odo.setTheta(nav.normalizeAngle(odo.getXYT()[2]));
+					//odo.setPosition(new double [] {0.0, 0.0, 0.0}, new boolean [] {false, false, true});
 					this.state = LocalizationState.DONE;
 					while (Button.waitForAnyPress() != Button.ID_ENTER);
 					synchronized(USLocalizer.done) {
@@ -151,20 +180,27 @@ public class USLocalizer extends Thread{
 					break;
 			}
 		} else if (type == LocalizationType.RISING_EDGE) {
+			// Robot will rotate counterclockwise until there is no wall in front of it
+			// and further more to ensure it goes to rising edge
 			switch(state) {
 				case RESET:
+					//If it is close to the wall, stop the motors, set theta=0 and start seeking thetaA (SEEK case)
 					if (distance < WALL_DIST - WALL_ERROR) {
 						leftMotor.stop(true);
 						rightMotor.stop(false);
 						odo.setTheta(0);
 						Sound.twoBeeps();
 						this.state = LocalizationState.SEEK;
-					} else {
+					}
+					//Otherwise, just keep going counterclockwise until it sees something
+					else {
 						leftMotor.backward();
 						rightMotor.forward();
 					}
 					break;
 				case SEEK:
+					//Here, it is seeing the first rising edge:
+					//Stop the motors, get thetaA, rotate clockwise (by thetaA amount), start looking for thetaB (SEEK_2 case)
 					if ((distance >= WALL_DIST - WALL_ERROR) && (prevDistance < WALL_DIST + WALL_ERROR))  {
 						leftMotor.stop(true);
 						rightMotor.stop(false);
@@ -173,19 +209,24 @@ public class USLocalizer extends Thread{
 						leftMotor.rotate(convertAngle(odo.WHEEL_RAD, odo.TRACK,-thetaA), true);
 						rightMotor.rotate(-convertAngle(odo.WHEEL_RAD, odo.TRACK, -thetaA), false);
 						this.state = LocalizationState.SEEK_2;
-					} else {
+					}
+					//If no rising edge detected, just keep moving clockwise
+					else {
 						leftMotor.forward();
 						rightMotor.backward();
 					}
 					break;
 				case SEEK_2:
+					//Detects second rising edge: stop motors, get thetaB, start correcting (CORRECTION case)
 					if ((distance >= WALL_DIST - WALL_ERROR) && (prevDistance < WALL_DIST + WALL_ERROR))  {
 						leftMotor.stop(true);
 						rightMotor.stop(false);
 						thetaB = odo.getXYT()[2] - 360;
 						Sound.beep();
 						this.state = LocalizationState.CORRECTION;
-					} else {
+					} 
+					//Otherwise, just keep going counterclockwise until it sees something
+					else {
 						leftMotor.backward();
 						rightMotor.forward();
 					}
@@ -194,11 +235,21 @@ public class USLocalizer extends Thread{
 					//thetaAv will be 45 degrees away from zero degrees
 					this.thetaAv = (this.thetaA - this.thetaB)/2.0;
 					this.thetaZero = this.thetaAv + 135;
+//					
+//					if(thetaA > thetaB) {
+//						thetaA -= 360;
+//					}
 	
+					//Rotate in the direction of thetaZero
 					leftMotor.rotate(convertAngle(odo.WHEEL_RAD, odo.TRACK, thetaZero + TURN_ERROR), true);
 					rightMotor.rotate(-convertAngle(odo.WHEEL_RAD, odo.TRACK, thetaZero + TURN_ERROR), false);
 	
+					//Set the odometer theta to 0
+					leftMotor.stop();
+					rightMotor.stop();
 					odo.setTheta(0);
+					odo.setTheta(0);
+					//odo.setPosition(new double [] {0.0, 0.0, 0.0}, new boolean [] {false, false, true});
 					this.state = LocalizationState.DONE;
 					while (Button.waitForAnyPress() != Button.ID_ENTER);
 					synchronized(USLocalizer.done) {

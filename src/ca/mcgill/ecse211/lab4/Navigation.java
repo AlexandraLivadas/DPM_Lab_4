@@ -129,7 +129,7 @@ public class Navigation extends Thread{
 	//Getting the minimum angle to turn:
 	//It is easier to turn +90 than -270
 	//Also, it is easier to turn -90 than +270
-	double normalizeAngle(double theta) {
+	public double normalizeAngle(double theta) {
 		if (theta <= -180) {
 			theta += 360;
 		}
