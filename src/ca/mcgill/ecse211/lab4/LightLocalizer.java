@@ -1,5 +1,6 @@
 package ca.mcgill.ecse211.lab4;
 
+import ca.mcgill.ecse211.Ultrasonic.USLocalizer;
 import ca.mcgill.ecse211.odometer.Odometer;
 import lejos.hardware.Sound;
 import lejos.robotics.SampleProvider;
@@ -36,6 +37,16 @@ public class LightLocalizer extends Thread{
 	}
 	
 	public void run() {
+		
+		synchronized(USLocalizer.done) {
+			try {
+				USLocalizer.done.wait();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		long correctionStart, correctionEnd;
 		float intensity;
 		firstReading = -1;

@@ -35,7 +35,7 @@ public class Odometer extends OdometerData implements Runnable {
 	   * @param rightMotor
 	   * @throws OdometerExceptions
 	   */
-	  public Odometer(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,
+	  private Odometer(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,
 	      final double TRACK, final double WHEEL_RAD) throws OdometerExceptions {
 	    odoData = OdometerData.getOdometerData(); // Allows access to x,y,z
 	                                             // manipulation methods

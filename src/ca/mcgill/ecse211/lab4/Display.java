@@ -43,10 +43,6 @@ public class Display extends Thread implements Runnable {
 	    this.lcd = lcd;
 	  }
 
-	  public Display(Odometer odo2, SampleProvider usValue, float[] usData) {
-		// TODO Auto-generated constructor stub
-	}
-
 	public void run() {
 	    lcd.clear();
 	    

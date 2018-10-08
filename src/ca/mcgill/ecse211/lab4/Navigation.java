@@ -15,7 +15,7 @@ public class Navigation extends Thread{
 	private static final int ACCEL = 300;
 	
 	private final double WHEEL_RAD = 2.2;
-	private final double WHEEL_BASE = 10.0;
+	private final double WHEEL_BASE = 10.05;
 	private final double TILE_SIZE = 30.48;
 	private double x, y, theta;
 	private boolean isNavigating;

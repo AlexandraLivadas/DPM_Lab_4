@@ -13,7 +13,9 @@ public class UltrasonicPoller extends Thread {
   private SampleProvider us;
   private USLocalizer cont;
   private float[] usData;
-  public float distance;
+  public int distance;
+  
+  public volatile boolean running = true;
 
   public UltrasonicPoller(SampleProvider us, float[] usData, USLocalizer cont) {
     this.us = us;
@@ -29,7 +31,7 @@ public class UltrasonicPoller extends Thread {
    */
   public void run() {
 
-    while (true) {
+    while (running) {
       us.fetchSample(usData, 0); // acquire data
       distance = (int)(usData[0] * 100.0); // extract from buffer, cast to int
       cont.processUSData(distance); // now take action depending on value
