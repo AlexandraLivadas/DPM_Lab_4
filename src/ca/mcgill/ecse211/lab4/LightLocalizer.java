@@ -1,8 +1,13 @@
 package ca.mcgill.ecse211.lab4;
 
+import java.text.DecimalFormat;
+
 import ca.mcgill.ecse211.Ultrasonic.USLocalizer;
 import ca.mcgill.ecse211.odometer.Odometer;
+import lejos.hardware.Button;
 import lejos.hardware.Sound;
+import lejos.hardware.ev3.LocalEV3;
+import lejos.hardware.lcd.TextLCD;
 import lejos.robotics.SampleProvider;
 
 public class LightLocalizer extends Thread{
@@ -13,14 +18,16 @@ public class LightLocalizer extends Thread{
 	private Navigation nav;
 	
 	private int lineCount;
+	
+	
 	private double thetaX, thetaY;
 	private double correctedX, correctedY, correctedTheta;
 	private double deltaThetaX, deltaThetaY, deltaTheta;
 	private boolean isNavigating;
 	private float firstReading;
-	private double lightThreshold = 30.0;
+	private double lightThreshold = 20.0;
 	public float lightSensorIntensity;
-	private double sensorDistance = 6.5; //in cm, 4.5inches
+	private double sensorDistance = 11.3; //in cm, 4.5inches
 	private final double WHEEL_RAD = 2.2;
 	private double[] lineAngles, linePos;
 	private int TURN_ERROR = 5;
@@ -78,8 +85,8 @@ public class LightLocalizer extends Thread{
 	       * Has to be a significant enough change, since the panels are not a uniform color. */
 	      else if ((100*Math.abs(intensity - firstReading)/firstReading) > lightThreshold) { 
 	    	  		if (intensity < firstReading) {
-	    	  			odo.leftMotor.stop();
-	    	  			odo.rightMotor.stop();
+	    	  			odo.leftMotor.stop(true);
+	    	  			odo.rightMotor.stop(false);
 	    	  			isNavigating = false;
 	    	  		}
 	      } 
@@ -87,8 +94,11 @@ public class LightLocalizer extends Thread{
 		
 		odo.leftMotor.rotate(-nav.convertDistance(WHEEL_RAD , sensorDistance), true);
 		odo.rightMotor.rotate(-nav.convertDistance(WHEEL_RAD, sensorDistance), false);
-		odo.leftMotor.rotate(nav.convertAngle(odo.WHEEL_RAD, odo.TRACK, -90), true);
-		odo.rightMotor.rotate(-nav.convertAngle(odo.WHEEL_RAD, odo.TRACK, -90), false);
+		
+		// make counter clock-wise motion so set the x axis first
+		
+//		odo.leftMotor.rotate(nav.convertAngle(odo.WHEEL_RAD, odo.TRACK, -90), true);
+//		odo.rightMotor.rotate(-nav.convertAngle(odo.WHEEL_RAD, odo.TRACK, -90), false);
 		
 		while(isNavigating) {
 		      correctionStart = System.currentTimeMillis();
@@ -100,15 +110,17 @@ public class LightLocalizer extends Thread{
 		       * Has to be a significant enough change, since the panels are not a uniform color. */
 		      if ((100*Math.abs(intensity - firstReading)/firstReading) > lightThreshold) { 
 		    	  		if (intensity < firstReading) {
-		    	  			odo.leftMotor.stop();
-		    	  			odo.rightMotor.stop();
+		    	  			odo.leftMotor.stop(true);
+		    	  			odo.rightMotor.stop(false);
 		    	  			isNavigating = false;
 		    	  		}
 		      } 
 			}
 		
-		odo.leftMotor.rotate(-nav.convertDistance(WHEEL_RAD , sensorDistance - 3), true);
-		odo.rightMotor.rotate(-nav.convertDistance(WHEEL_RAD, sensorDistance - 3), false);
+		//odo.leftMotor.rotate(-nav.convertDistance(WHEEL_RAD , sensorDistance - 3), true);
+		//odo.rightMotor.rotate(-nav.convertDistance(WHEEL_RAD, sensorDistance - 3), false);
+		
+		// start rotating to find the lines
 		odo.leftMotor.backward();
 		odo.rightMotor.forward();
 		
@@ -122,6 +134,10 @@ public class LightLocalizer extends Thread{
 		    
 		    if ((100*Math.abs(intensity - firstReading)/firstReading) > lightThreshold) {
 		    		
+		    		if(lineCount == 3) {
+		    			odo.leftMotor.stop(true);
+		    			odo.rightMotor.stop(false);
+		    		}
 		    		linePos = odo.getXYT();
 		    		
 		    		lineAngles[lineCount] = linePos[2];
@@ -129,14 +145,14 @@ public class LightLocalizer extends Thread{
 		    		Sound.beep();
 		    		
 		    		lineCount++;
-		
-		    		try {
-		    			Thread.sleep(50);
-		    		} catch (InterruptedException e) {
 		    			
-		    		}
 		    }
-		   
+		    
+	    		try {
+	    			Thread.sleep(20);
+	    		} catch (InterruptedException e) {
+	    			
+	    		}
 //		    odo.leftMotor.setSpeed(50);
 //		    odo.rightMotor.setSpeed(50);
 //		    odo.leftMotor.backward();
@@ -144,39 +160,39 @@ public class LightLocalizer extends Thread{
 		    
 		}
 		
-		odo.leftMotor.stop();
-		odo.rightMotor.stop();
+
 		
 		//Trigonometry calculations from tutorial
-		thetaX = lineAngles[2] - lineAngles[0];
-		thetaY = lineAngles[3] - lineAngles[1];
+		//assuming that we start in bottom left square
+		thetaY = Math.abs(lineAngles[2] - lineAngles[0]);
+		thetaX =  Math.abs(lineAngles[3] - lineAngles[1]);
 		
-		correctedX = sensorDistance*Math.cos(Math.toRadians(thetaY/2));
-		correctedY = sensorDistance*Math.cos(Math.toRadians(thetaX/2));
+		correctedX = -sensorDistance*Math.cos(Math.toRadians(thetaY/2));
+		correctedY = -sensorDistance*Math.cos(Math.toRadians(thetaX/2));
 		
 		//nav.turnTo(odo.getXYT()[2], 0);
-		//odo.setPosition(new double [] {correctedX, correctedY, 0.0}, new boolean [] {true, true, true});
-		
-		
+		//odo.setPosition(new double [] {correctedX, correctedY, 0.0}, new boolean [] {true, true, true});	
 
 		//Not sure about deltaThetaX calc. ***Could be lineAngles[2]
-		deltaThetaX = 270 - (thetaX/2) - lineAngles[2];
-		deltaThetaY = 270 - (thetaY/2) - lineAngles[3];
 		
-		deltaTheta = (deltaThetaX + deltaThetaY)/2;
+		//current theta value
+		deltaThetaX = (270 + (thetaX/2) - lineAngles[3]) % 360;
+		deltaThetaY = (540 + (thetaY/2) - lineAngles[0]) % 360;
 		
-		correctedTheta = odo.getXYT()[2] - deltaTheta;
-		correctedTheta = nav.normalizeAngle(correctedTheta);
+		deltaTheta = (deltaThetaX + deltaThetaY)/2.0;
+//		
+//		correctedTheta = odo.getXYT()[2] - deltaTheta;
+//		correctedTheta = nav.normalizeAngle(correctedTheta);
 		
-		odo.setXYT(correctedX, correctedY, correctedTheta);	
+//		odo.setX(correctedX);
+//		odo.setY(correctedY);
+
+		odo.setXYT(correctedX, correctedY, -deltaTheta);	
 
 		nav.travelTo(0, 0);
-		nav.turnTo(odo.getXYT()[2], 50);
+		nav.turnTo(odo.getXYT()[2], 0);
 		//nav.turnTo(odo.getXYT()[2], 360-TURN_ERROR);
-		odo.setTheta(0);
-		odo.leftMotor.stop();
-		odo.rightMotor.stop();
-
+//		odo.setTheta(0);
 		
 		try {
 			Thread.sleep(50);

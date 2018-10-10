@@ -48,8 +48,8 @@ public class USLocalizer extends Thread{
 	public int FILTER_OUT = 20;
 	public static int FILTER_OUT_DIST = 50;
 	public static int WALL_DIST = 35;
-	public static int WALL_ERROR = 8;
-	public static int TURN_ERROR = 2;
+	public static int WALL_ERROR = 5;
+	public static int TURN_ERROR = 0;
 
 	private static final int FORWARD_SPEED = 250;
 	private static final int ROTATE_SPEED = 120;
